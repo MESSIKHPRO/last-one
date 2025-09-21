@@ -33,44 +33,52 @@ git push -u origin main
 
 ---
 
-## 2. Deploy to Render (Reliable Method)
+## 2. Deploy to Render (Working Method for Monorepo)
 
-Render cannot handle a space-separated path for Root Directory. To fix this, we must **deploy only the backend** and serve the frontend build statically from the backend.
+To avoid Root Directory issues, deploy the **entire project root** and include both `frontend` and `backend`. We'll handle frontend build and backend start with a single Render service.
 
 ### Steps:
 
-1. Build the frontend locally:
-```bash
-cd frontend
-npm install
-npm run build
+1. Ensure the project structure is like this:
 ```
-2. Move the build to the backend folder:
-```bash
-mkdir -p backend/public
-cp -r dist/* backend/public/
+project-root/
+ ├─ backend/
+ │   ├─ package.json
+ │   └─ server.js
+ ├─ frontend/
+ │   ├─ package.json
+ │   └─ src/
+ └─ README.md
 ```
-3. Adjust `backend/server.js` to serve static files from `public`:
-```js
-app.use(express.static(path.join(__dirname, 'public')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
-});
-```
-4. Push the changes to GitHub.
 
-### Render Configuration:
-- **Root Directory:** `backend`
-- **Build Command:** `npm install`
-- **Start Command:** `node server.js`
+2. Render Configuration:
+- **Root Directory:** `/` (project root)
+- **Build Command:**
+```bash
+# Build frontend
+cd frontend && npm install && npm run build
+
+# Copy build to backend
+mkdir -p backend/public
+cp -r dist/* ../backend/public
+
+# Install backend dependencies
+cd ../backend && npm install
+```
+- **Start Command:**
+```bash
+cd backend && node server.js
+```
 - **Node Version:** 20 or compatible
 
-After Render builds the service, it will provide a live link like:
+> This ensures Render sees a valid package.json in `backend` and the frontend is served statically from `backend/public`.
+
+3. Push all changes to GitHub.
+4. Create the web service on Render and select the repository.
+5. After deployment, Render provides a live link like:
 ```
 https://your-service-name.onrender.com
 ```
-
-This method avoids Root Directory issues and missing package.json errors.
 
 ---
 
@@ -82,6 +90,7 @@ cd backend
 npm install
 node server.js
 ```
+
 ### Frontend (for development):
 ```bash
 cd frontend
@@ -102,4 +111,4 @@ http://localhost:3000
 
 ---
 
-This approach ensures Render can build and serve the project successfully without Root Directory errors.
+This method ensures Render can successfully build the project without missing Root Directory or package.json errors by deploying from the project root and copying frontend build into backend.
